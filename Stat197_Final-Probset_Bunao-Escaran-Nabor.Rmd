@@ -1,0 +1,134 @@
+---
+title: "Stat197_Final-Project_Bunao-Escaran-Nabor"
+output: html_document
+---
+```{r}
+NEI <- readRDS("summarySCC_PM25.rds")
+SCC <- readRDS("Source_Classification_Code.rds")
+
+str(NEI)
+str(SCC)
+
+library(ggplot2)
+```
+
+```
+Question 1
+```
+```{r, echo = FALSE}
+totalemissions <- aggregate(Emissions ~ year, NEI, sum)
+
+
+plot(totalemissions$year, totalemissions$Emissions, type = "o", col = "red",
+     main = "Total US PM2.5 Emissions by Year", ylab = "Emissions",
+     xlab = "Year")
+```
+```
+Based on the plot shown, the total emissions in the US have decreased from
+1999 to 2008.
+```
+
+```
+Question 2
+```
+```{r, echo = FALSE}
+Baltimore <- NEI[NEI$fips == "24510", ]
+
+BaltEmissions <- aggregate(Emissions ~ year, Baltimore, sum)
+
+
+plot(BaltEmissions$Emissions, 
+        names.arg = BaltEmissions$year, main = "Total Emissions in Baltimore
+        City by Year", xlab = "Year", ylab = "Baltimore City Emissions", 
+        type = "o", col = "red")
+```
+```
+Although there has been an increase from 2002 to 2005, the overall emissions in 
+the city of Baltimore in Maryland decreased from 1999 to 2008.
+```
+
+```
+Question 3
+```
+```{r, echo = FALSE}
+Baltimore <- aggregate(NEI$Emissions,by=list(NEI$year, NEI$fips=="24510",NEI$type),sum)
+names(Baltimore) <- c("year","Bal","type","Emissions")
+x <- Baltimore[Baltimore$Bal==TRUE,]
+
+
+qplot(year,Emissions,data=x, geom=c("line","point"), color=type, 
+      main="Total Emissions of Baltimore City by Type from 1999-2008", 
+      ylab="Emissions(in tons)")
+```
+```
+Source types non-road, nonpoint, and on-road have decreased emissions overall from 1999
+to 2008 in Baltimore while the point source had an increase until 2005 but decreased
+again in 2008.
+```
+
+
+```
+Question 4
+```
+```{r, echo = FALSE}
+i<-grep("Coal",SCC$EI.Sector,ignore.case = TRUE)
+index <-SCC[i,]$SCC
+
+coalemission <-aggregate(NEI$Emissions,by=list(NEI$year, NEI$SCC %in% index),sum)
+names(coalemission) <-c("Year","Coal","Emissions")
+coalemission<-coalemission[coalemission$Coal==TRUE,]
+
+
+qplot(Year,Emissions,data=coalemission, geom=c("line","point"), 
+      main="Total Emission from 1999-2008 of Coal Combustion-Related Sources",
+      ylab="Emissions(in tons)")
+```
+```
+Emissions from coal combustion have decreased from 1999 to 2008.
+```
+
+```
+Question 5
+```
+```{r, echo = FALSE}
+motor <- grepl("vehicle", SCC$SCC.Level.Two, ignore.case = T)
+motorSCC <- SCC[motor, ]$SCC
+motorNEI <- NEI[NEI$SCC %in% motorSCC, ]
+
+BaltMotor <- motorNEI[motorNEI$fips == 24510, ]
+
+
+ggplot(BaltMotor, aes(factor(year), Emissions)) + 
+  geom_bar(stat = "identity", fill = "blue") + theme_bw() +
+  guides(fill = F) + 
+  labs(x = "Year", y = "Motor Vehicle Emissions") +
+  labs(title = expression("Motor Vehicle Emissions in Baltimore from 1999 - 2008"))
+```
+```
+Emissions from motor vehicle sources have dropped from the year 1999 to the year 2008 in Baltimore. Approximately 250 have decreased in the emissions from motor vehicle sources in Baltimore from 1999 to 2008.
+```
+
+
+```
+Question 6
+```
+```{r, echo = FALSE}
+motoremission <-aggregate(NEI$Emissions, by=list(NEI$year, NEI$type=="ON-ROAD",NEI$fips),sum)
+names(motoremission) <-c("year","type","fips","Emissions")
+motoremission<-motoremission[motoremission$type==TRUE & (motoremission$fips=='24510'|motoremission$fips=="06037"),]
+motoremission$city <-ifelse(motoremission$fips=="24510","Baltimore City","LA County")
+
+baseline<-motoremission[motoremission$year==1999,]
+motoremission$baseline<-ifelse(motoremission$fips=="24510",baseline[baseline$fips=="24510",4],
+                               baseline[baseline$fips=="06037",4])
+motoremission$changes<-motoremission$Emissions/motoremission$baseline
+
+
+qplot(year,changes,data=motoremission, geom=c("line","point"), 
+      main="Changes in the Emission from Motor-Related Sources of 
+      Baltimore City vs LA County (1999-2008)",
+      color=city, ylab="Changes in Emissions (Emissions in 1999=1)")
+```
+```
+Based on the line graph, Baltimore City has seen greater changes over time in motor vehicle emissions compared to Los Angeles City. This is because motor vehicle emissions in Baltimore went a huge drop from 1999 to 2002 and continually decreased until 2008. Los Angeles, on the other hand, has increased motor vehicle emissions from 1999 to 2005; however, the emissions decreased in 2008 and the change in motor vehicle emissions are only slightly lower than it was in 1999.
+```
